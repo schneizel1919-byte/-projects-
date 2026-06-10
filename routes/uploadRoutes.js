@@ -52,8 +52,12 @@ router.post('/', protect, upload.single('file'), (req, res) => {
   // Windows'daki ters slash (\) karakterlerini URL için düz slasha (/) çevirir
   const normalizedPath = req.file.path.replace(/\\/g, '/');
   
-  // Örn: /uploads/audio-123456.mp3
-  res.json({ url: `http://localhost:5000/${normalizedPath}` });
+  // İstek atılan sunucunun adresini (Render veya Localhost) dinamik olarak al
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+  const host = req.get('host');
+  const fullUrl = `${protocol}://${host}/${normalizedPath}`;
+  
+  res.json({ url: fullUrl });
 });
 
 module.exports = router;
