@@ -11,19 +11,19 @@ const HomePage = () => {
   const { playTrack, currentTrack, isPlaying, togglePlay } = useContext(PlayerContext);
 
   const [myProjects, setMyProjects] = useState([]);
-  const [standaloneTracks, setStandaloneTracks] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Ekleme Menüsü
   const [showOptions, setShowOptions] = useState(false);
-  const [formType, setFormType] = useState(null); // 'project' veya 'track'
+  const [formType, setFormType] = useState(null); // 'project' veya 'single'
 
-  // Proje Form
+  // Proje/Klasör Form
   const [projectData, setProjectData] = useState({ title: '', description: '' });
   const [coverFile, setCoverFile] = useState(null);
 
-  // Track Form
+  // Single Track Form
   const [trackForm, setTrackForm] = useState({ title: '' });
+  const [singleCoverFile, setSingleCoverFile] = useState(null);
   const [audioFile, setAudioFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -33,7 +33,6 @@ const HomePage = () => {
         try {
           const { data } = await api.get(`/api/users/${user._id}/projects`);
           setMyProjects(data.projects || []);
-          setStandaloneTracks(data.standaloneTracks || []);
         } catch (error) {
           console.error("Projeler yüklenemedi", error);
         } finally {
@@ -97,17 +96,47 @@ const HomePage = () => {
     if (!audioFile) return alert("Ses dosyası seçin.");
     setIsUploading(true);
     try {
+      // 1. Kapak Resmi Yükle (Varsa)
+      let finalCoverUrl = '';
+      if (singleCoverFile) {
+        const coverData = new FormData();
+        coverData.append('file', singleCoverFile);
+        const coverRes = await api.post('/api/upload', coverData, { headers: { 'Content-Type': 'multipart/form-data' } });
+        finalCoverUrl = coverRes.data.url;
+      }
+
+      // 2. Projeyi Oluştur
+      const projectRes = await api.post('/api/projects', { 
+        title: trackForm.title, 
+        description: 'Single', 
+        coverImageUrl: finalCoverUrl 
+      });
+      const newProject = projectRes.data;
+
+      // 3. Ses Dosyasını Yükle
       const uploadData = new FormData();
       uploadData.append('file', audioFile);
       const uploadRes = await api.post('/api/upload', uploadData, { headers: { 'Content-Type': 'multipart/form-data' } });
 
-      const { data } = await api.post('/api/tracks', { title: trackForm.title, audioUrl: uploadRes.data.url });
-      setStandaloneTracks([data, ...standaloneTracks]);
+      // 4. Track'i Oluştur ve Projeye Ekle
+      const trackRes = await api.post('/api/tracks', { 
+        title: trackForm.title, 
+        audioUrl: uploadRes.data.url,
+        projectId: newProject._id
+      });
+      
+      // Projeye track'i manuel olarak ekleyip state'i güncelle
+      newProject.tracks = [trackRes.data];
+      setMyProjects([newProject, ...myProjects]);
+
       setFormType(null);
       setShowOptions(false);
       setTrackForm({ title: '' });
+      setSingleCoverFile(null);
       setAudioFile(null);
-    } catch (error) { } finally { setIsUploading(false); }
+    } catch (error) { 
+      console.error(error);
+    } finally { setIsUploading(false); }
   };
 
   const handleDeleteProject = async (id) => {
@@ -118,13 +147,7 @@ const HomePage = () => {
     } catch (error) { }
   };
 
-  const handleDeleteTrack = async (trackId) => {
-    if (!window.confirm("Bu bağımsız şarkıyı silmek istediğinize emin misiniz?")) return;
-    try {
-      await api.delete(`/api/tracks/${trackId}`);
-      setStandaloneTracks(standaloneTracks.filter(t => t._id !== trackId));
-    } catch (error) { }
-  };
+
 
   // Giriş YAPMIŞ kullanıcı için Kendi Kütüphanesi
   return (
@@ -163,10 +186,10 @@ const HomePage = () => {
                 Yeni Klasör Oluştur
               </button>
               <button
-                onClick={() => setFormType('track')}
+                onClick={() => setFormType('single')}
                 style={{ background: 'transparent', border: '1px solid gray', color: 'white', padding: '12px', textAlign: 'left', fontWeight: '600', cursor: 'pointer' }}
               >
-                Yeni Proje Ekle
+                Tekli Şarkı (Single) Yükle
               </button>
             </div>
           )}
@@ -186,41 +209,25 @@ const HomePage = () => {
         </form>
       </Modal>
 
-      <Modal isOpen={formType === 'track'} onClose={() => setFormType(null)} title="Bağımsız Şarkı Yükle">
+      <Modal isOpen={formType === 'single'} onClose={() => setFormType(null)} title="Tekli Şarkı (Single) Yükle">
         <form onSubmit={handleUploadTrack} style={{ padding: '8px' }}>
-          <p style={{ color: 'gray', fontSize: '14px', marginBottom: '16px' }}>Bu şarkı hiçbir klasöre ait olmayacak, doğrudan kütüphanende görünecektir.</p>
+          <p style={{ color: 'gray', fontSize: '14px', marginBottom: '16px' }}>Bu şarkı için otomatik olarak özel bir "Single" klasörü oluşturulacaktır.</p>
           <input className="input-field" style={{ background: 'var(--bg-color)' }} type="text" placeholder="Şarkı Adı (Zorunlu)" value={trackForm.title} onChange={e => setTrackForm({ ...trackForm, title: e.target.value })} required />
+          
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontSize: '14px', marginBottom: '8px' }}>Kapak Resmi Yükle (İsteğe Bağlı)</label>
+            <input className="input-field" style={{ padding: '8px', background: 'var(--bg-color)' }} type="file" accept="image/*" onChange={e => setSingleCoverFile(e.target.files[0])} />
+          </div>
+
           <div style={{ marginBottom: '16px' }}>
             <label style={{ display: 'block', fontSize: '14px', marginBottom: '8px' }}>Ses Dosyası Seç (.mp3, .wav)</label>
             <input className="input-field" style={{ padding: '8px', background: 'var(--bg-color)' }} type="file" accept="audio/*" onChange={e => setAudioFile(e.target.files[0])} required />
           </div>
-          <button type="submit" className="btn-primary" disabled={isUploading}>{isUploading ? 'Yükleniyor...' : 'Şarkıyı Yükle'}</button>
+          <button type="submit" className="btn-primary" disabled={isUploading}>{isUploading ? 'Yükleniyor...' : 'Single Yayınla'}</button>
         </form>
       </Modal>
 
-      {/* BAĞIMSIZ ŞARKILAR (SINGLE) LISTESİ */}
-      {standaloneTracks.length > 0 && (
-        <div style={{ marginBottom: '64px' }}>
-          <h2 style={{ fontSize: '24px', letterSpacing: '-0.5px', marginBottom: '24px', color: 'white' }}>Bağımsız Şarkılar</h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {standaloneTracks.map((track, index) => {
-              const isActive = currentTrack && currentTrack._id === track._id;
-              return (
-                <div key={track._id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: isActive ? 'var(--gray-light)' : 'transparent', border: '1px solid var(--gray-border)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <span style={{ color: 'gray', width: '24px', fontSize: '14px' }}>{index + 1}</span>
-                    <button onClick={() => isActive ? togglePlay() : playTrack(track, standaloneTracks)} className="btn-primary" style={{ padding: '8px', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {isActive && isPlaying ? 'II' : '►'}
-                    </button>
-                    <span style={{ fontWeight: isActive ? '600' : '500' }}>{track.title}</span>
-                  </div>
-                  <button onClick={() => handleDeleteTrack(track._id)} style={{ color: '#FF3333', fontSize: '12px', fontWeight: '700' }}>SİL</button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+
 
       {/* KLASÖRLER (PROJELER) LİSTESİ */}
       <h2 style={{ fontSize: '24px', letterSpacing: '-0.5px', marginBottom: '24px', color: 'white' }}>Projelerim.</h2>

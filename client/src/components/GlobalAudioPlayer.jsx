@@ -1,6 +1,7 @@
 import { useContext, useEffect, useRef, useState } from 'react';
 import { PlayerContext } from '../context/PlayerContext';
 import { AuthContext } from '../context/AuthContext';
+import { formatUrl } from '../utils/formatUrl';
 
 const GlobalAudioPlayer = () => {
   const { currentTrack, isPlaying, projectInfo, togglePlay, playNext, playPrev, clearPlayer } = useContext(PlayerContext);
@@ -66,7 +67,7 @@ const GlobalAudioPlayer = () => {
         {/* Sol: Kapak ve Şarkı Adı */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', width: '30%' }}>
           {projectInfo?.coverImageUrl ? (
-             <img src={projectInfo.coverImageUrl} alt="cover" style={{ width: '48px', height: '48px', objectFit: 'cover', border: '1px solid var(--gray-border)' }} />
+             <img src={formatUrl(projectInfo.coverImageUrl)} alt="cover" style={{ width: '48px', height: '48px', objectFit: 'cover', border: '1px solid var(--gray-border)' }} />
           ) : (
              <div style={{ width: '48px', height: '48px', backgroundColor: 'var(--gray-light)', border: '1px solid var(--gray-border)' }}></div>
           )}
@@ -111,7 +112,7 @@ const GlobalAudioPlayer = () => {
 
         <audio 
           ref={audioRef} 
-          src={currentTrack.audioUrl} 
+          src={formatUrl(currentTrack.audioUrl)} 
           onTimeUpdate={handleTimeUpdate}
           onLoadedMetadata={handleLoadedMetadata}
           onEnded={playNext} 

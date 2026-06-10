@@ -4,6 +4,7 @@ import api from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
 import { PlayerContext } from '../context/PlayerContext';
 import TrackList from '../components/TrackList';
+import { formatUrl } from '../utils/formatUrl';
 
 const ProjectPage = () => {
   const { id } = useParams();
@@ -101,7 +102,7 @@ const ProjectPage = () => {
         <div style={{
           width: '300px', height: '300px',
           backgroundColor: 'var(--gray-light)',
-          backgroundImage: project.coverImageUrl ? `url(${project.coverImageUrl})` : 'none',
+          backgroundImage: project.coverImageUrl ? `url(${formatUrl(project.coverImageUrl)})` : 'none',
           backgroundSize: 'cover', backgroundPosition: 'center',
           border: '1px solid var(--gray-border)'
         }}></div>

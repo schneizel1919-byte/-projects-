@@ -81,15 +81,11 @@ const getProjectsByArtist = async (req, res, next) => {
       .populate('tracks', 'title audioUrl duration')
       .sort({ createdAt: -1 });
 
-    const standaloneTracks = await Track.find({ artist: req.params.id, project: null })
-      .sort({ createdAt: -1 });
-
     res.json({
       success: true,
       artist: { _id: user._id, name: user.name, profilePicture: user.profilePicture },
       count: projects.length,
-      projects,
-      standaloneTracks,
+      projects
     });
   } catch (error) {
     next(error);

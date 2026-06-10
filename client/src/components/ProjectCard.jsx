@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { formatUrl } from '../utils/formatUrl';
 
 const ProjectCard = ({ project }) => {
   return (
@@ -9,7 +10,7 @@ const ProjectCard = ({ project }) => {
         backgroundColor: 'var(--gray-light)',
         marginBottom: '16px',
         border: '1px solid var(--gray-border)',
-        backgroundImage: project.coverImageUrl ? `url(${project.coverImageUrl})` : 'none',
+        backgroundImage: project.coverImageUrl ? `url(${formatUrl(project.coverImageUrl)})` : 'none',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         transition: 'opacity 0.2s'

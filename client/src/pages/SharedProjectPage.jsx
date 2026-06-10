@@ -4,6 +4,7 @@ import api from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
 import { PlayerContext } from '../context/PlayerContext';
 import toast from 'react-hot-toast';
+import { formatUrl } from '../utils/formatUrl';
 
 const SharedProjectPage = () => {
   const { token } = useParams();
@@ -59,7 +60,7 @@ const SharedProjectPage = () => {
       <div style={{ display: 'flex', gap: '40px', alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: '48px' }}>
         <div style={{
           width: '260px', height: '260px', backgroundColor: 'var(--gray-light)',
-          backgroundImage: project.coverImageUrl ? `url(${project.coverImageUrl})` : 'none',
+          backgroundImage: project.coverImageUrl ? `url(${formatUrl(project.coverImageUrl)})` : 'none',
           backgroundSize: 'cover', backgroundPosition: 'center', border: '1px solid var(--gray-border)'
         }} />
         <div style={{ flex: 1, paddingTop: '16px' }}>
