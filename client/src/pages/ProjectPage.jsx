@@ -9,7 +9,7 @@ const ProjectPage = () => {
   const { id } = useParams();
   const { user } = useContext(AuthContext);
   const { playTrack, currentTrack, isPlaying, togglePlay } = useContext(PlayerContext);
-  
+
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [trackForm, setTrackForm] = useState({ title: '' });
@@ -45,27 +45,27 @@ const ProjectPage = () => {
       // 1. Önce ses dosyasını /api/upload'a gönder
       const uploadData = new FormData();
       uploadData.append('file', audioFile);
-      
+
       const uploadRes = await api.post('/api/upload', uploadData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      
+
       const finalAudioUrl = uploadRes.data.url;
 
       // 2. Yüklenen dosyanın URL'i ile Track oluştur
-      const { data } = await api.post('/api/tracks', { 
-        title: trackForm.title, 
-        audioUrl: finalAudioUrl, 
-        projectId: id 
+      const { data } = await api.post('/api/tracks', {
+        title: trackForm.title,
+        audioUrl: finalAudioUrl,
+        projectId: id
       });
-      
+
       setProject({ ...project, tracks: [...project.tracks, data] });
       setTrackForm({ title: '' });
       setAudioFile(null);
       setShowTrackForm(false);
-      
+
       // Form input file değerini sıfırlamak için DOM kullanabiliriz ama basit geçelim
-      document.getElementById('audioInput').value = ''; 
+      document.getElementById('audioInput').value = '';
     } catch (error) {
       console.error(error);
     } finally {
@@ -78,7 +78,7 @@ const ProjectPage = () => {
     try {
       await api.delete(`/api/tracks/${trackId}`);
       setProject({ ...project, tracks: project.tracks.filter(t => t._id !== trackId) });
-    } catch (error) {}
+    } catch (error) { }
   };
 
   const handleDeleteProject = async () => {
@@ -86,7 +86,7 @@ const ProjectPage = () => {
     try {
       await api.delete(`/api/projects/${id}`);
       navigate('/');
-    } catch (error) {}
+    } catch (error) { }
   };
 
   if (loading) return <div className="spinner" style={{ margin: '100px auto' }}></div>;
@@ -98,8 +98,8 @@ const ProjectPage = () => {
     <div>
       {/* Üst Kısım: Proje Kapak ve Bilgiler */}
       <div style={{ display: 'flex', gap: '40px', alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: '64px' }}>
-        <div style={{ 
-          width: '300px', height: '300px', 
+        <div style={{
+          width: '300px', height: '300px',
           backgroundColor: 'var(--gray-light)',
           backgroundImage: project.coverImageUrl ? `url(${project.coverImageUrl})` : 'none',
           backgroundSize: 'cover', backgroundPosition: 'center',
@@ -111,11 +111,11 @@ const ProjectPage = () => {
             <h1 style={{ fontSize: '56px', letterSpacing: '-2px', fontWeight: '700', marginBottom: '8px', lineHeight: '1.1' }}>
               {project.title}
             </h1>
-            
+
             {/* 3 Nokta Menüsü (Sadece Proje Sahibine Görünür) */}
             {isOwner && (
               <div style={{ position: 'relative' }}>
-                <button 
+                <button
                   onClick={() => setShowMenu(!showMenu)}
                   style={{ background: 'transparent', color: 'var(--text-color)', border: 'none', fontSize: '24px', cursor: 'pointer', padding: '8px 16px', borderRadius: '4px' }}
                   onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--gray-light)'}
@@ -123,36 +123,36 @@ const ProjectPage = () => {
                 >
                   ⋮
                 </button>
-                
+
                 {showMenu && (
-                  <div style={{ position: 'absolute', right: 0, top: '40px', backgroundColor: 'var(--bg-color)', border: '1px solid var(--gray-border)', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 10, minWidth: '150px', overflow: 'hidden' }}>
-                    <button 
+                  <div style={{ position: 'absolute', right: 0, top: '40px', backgroundColor: 'var(--bg-color)', border: '1px solid var(--gray-border)', borderRadius: '8px', boxShadow: '0 4px 12px rgba(255, 255, 255, 1)', zIndex: 10, minWidth: '150px', overflow: 'hidden' }}>
+                    <button
                       onClick={() => {
                         const link = `${window.location.origin}/shared/${project.shareToken}`;
                         navigator.clipboard.writeText(link);
-                        import('react-hot-toast').then(m => m.default.success('Paylaşım linki kopyalandı! 🔗'));
+                        import('react-hot-toast').then(m => m.default.success('Paylaşım linki kopyalandı.'));
                         setShowMenu(false);
                       }}
-                      style={{ display: 'block', width: '100%', padding: '12px 16px', textAlign: 'left', background: 'transparent', border: 'none', borderBottom: '1px solid var(--gray-border)', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}
+                      style={{ display: 'block', width: '100%', padding: '12px 16px', textAlign: 'left', background: 'transparent', border: 'none', borderBottom: '1px solid var(--gray-border)', cursor: 'pointer', fontSize: '14px', fontWeight: '500', color: 'white' }}
                       onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--gray-light)'}
                       onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
-                      🔗 Paylaş
+                      Paylaş
                     </button>
-                    <button 
+                    <button
                       onClick={handleDeleteProject}
-                      style={{ display: 'block', width: '100%', padding: '12px 16px', textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '14px', fontWeight: '500', color: '#FF3333' }}
+                      style={{ display: 'block', width: '100%', padding: '12px 16px', textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '14px', fontWeight: '500', color: 'white' }}
                       onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--gray-light)'}
                       onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
-                      🗑️ Sil
+                      Sil
                     </button>
                   </div>
                 )}
               </div>
             )}
           </div>
-          
+
           <h2 style={{ fontSize: '20px', color: 'gray', marginBottom: '24px', fontWeight: '500' }}>
             {project.artist?.name || 'Bilinmeyen Sanatçı'}
           </h2>
@@ -173,9 +173,9 @@ const ProjectPage = () => {
       {isOwner && showTrackForm && (
         <form onSubmit={handleAddTrack} style={{ padding: '32px', border: '1px solid var(--gray-border)', marginBottom: '32px', backgroundColor: 'var(--gray-light)' }}>
           <h4 style={{ fontSize: '18px', marginBottom: '16px', fontWeight: '600' }}>Bilgisayardan Yeni Şarkı Ekle</h4>
-          
-          <input className="input-field" style={{ backgroundColor: 'var(--bg-color)' }} type="text" placeholder="Şarkı Adı" value={trackForm.title} onChange={e => setTrackForm({...trackForm, title: e.target.value})} required />
-          
+
+          <input className="input-field" style={{ backgroundColor: 'var(--bg-color)' }} type="text" placeholder="Şarkı Adı" value={trackForm.title} onChange={e => setTrackForm({ ...trackForm, title: e.target.value })} required />
+
           <div style={{ marginBottom: '16px' }}>
             <label style={{ display: 'block', fontSize: '14px', marginBottom: '8px', fontWeight: '500' }}>Ses Dosyası Seç (.mp3, .wav)</label>
             <input id="audioInput" className="input-field" style={{ backgroundColor: 'var(--bg-color)', padding: '8px' }} type="file" accept="audio/*" onChange={e => setAudioFile(e.target.files[0])} required />
