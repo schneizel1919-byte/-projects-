@@ -19,7 +19,7 @@ const ProjectPage = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [showTrackForm, setShowTrackForm] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
-  
+
   // Taşıma (Move) işlemi state'leri
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [userProjects, setUserProjects] = useState([]);
@@ -182,7 +182,7 @@ const ProjectPage = () => {
                       onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--gray-light)'}
                       onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
-                      Başka Klasöre Taşı
+                      Taşı
                     </button>
                     <button
                       onClick={handleDeleteProject}
@@ -206,7 +206,7 @@ const ProjectPage = () => {
       </div>
 
       {/* Şarkı Taşıma Modalı */}
-      <Modal isOpen={showMoveModal} onClose={() => setShowMoveModal(false)} title="Başka Klasöre Taşı">
+      <Modal isOpen={showMoveModal} onClose={() => setShowMoveModal(false)} title="Taşı">
         <form onSubmit={handleMoveProject} style={{ padding: '8px' }}>
           <p style={{ color: 'gray', fontSize: '14px', marginBottom: '16px' }}>
             Bu klasördeki tüm şarkılar seçeceğiniz klasöre taşınacak ve bu klasör silinecektir.
