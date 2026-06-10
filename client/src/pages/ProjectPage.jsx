@@ -1,5 +1,5 @@
 import { useState, useEffect, useContext } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
 import { PlayerContext } from '../context/PlayerContext';
@@ -16,6 +16,8 @@ const ProjectPage = () => {
   const [audioFile, setAudioFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [showTrackForm, setShowTrackForm] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchProject = async () => {
@@ -79,6 +81,14 @@ const ProjectPage = () => {
     } catch (error) {}
   };
 
+  const handleDeleteProject = async () => {
+    if (!window.confirm("Bu projeyi tamamen silmek istediğinize emin misiniz?")) return;
+    try {
+      await api.delete(`/api/projects/${id}`);
+      navigate('/');
+    } catch (error) {}
+  };
+
   if (loading) return <div className="spinner" style={{ margin: '100px auto' }}></div>;
   if (!project) return <div style={{ textAlign: 'center', marginTop: '100px', color: 'gray' }}>Proje bulunamadı.</div>;
 
@@ -96,10 +106,53 @@ const ProjectPage = () => {
           border: '1px solid var(--gray-border)'
         }}></div>
 
-        <div style={{ flex: 1, minWidth: '300px', paddingTop: '20px' }}>
-          <h1 style={{ fontSize: '56px', letterSpacing: '-2px', fontWeight: '700', marginBottom: '8px', lineHeight: '1.1' }}>
-            {project.title}
-          </h1>
+        <div style={{ flex: 1, minWidth: '300px', paddingTop: '20px', position: 'relative' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <h1 style={{ fontSize: '56px', letterSpacing: '-2px', fontWeight: '700', marginBottom: '8px', lineHeight: '1.1' }}>
+              {project.title}
+            </h1>
+            
+            {/* 3 Nokta Menüsü (Sadece Proje Sahibine Görünür) */}
+            {isOwner && (
+              <div style={{ position: 'relative' }}>
+                <button 
+                  onClick={() => setShowMenu(!showMenu)}
+                  style={{ background: 'transparent', color: 'var(--text-color)', border: 'none', fontSize: '24px', cursor: 'pointer', padding: '8px 16px', borderRadius: '4px' }}
+                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--gray-light)'}
+                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                  ⋮
+                </button>
+                
+                {showMenu && (
+                  <div style={{ position: 'absolute', right: 0, top: '40px', backgroundColor: 'var(--bg-color)', border: '1px solid var(--gray-border)', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 10, minWidth: '150px', overflow: 'hidden' }}>
+                    <button 
+                      onClick={() => {
+                        const link = `${window.location.origin}/shared/${project.shareToken}`;
+                        navigator.clipboard.writeText(link);
+                        import('react-hot-toast').then(m => m.default.success('Paylaşım linki kopyalandı! 🔗'));
+                        setShowMenu(false);
+                      }}
+                      style={{ display: 'block', width: '100%', padding: '12px 16px', textAlign: 'left', background: 'transparent', border: 'none', borderBottom: '1px solid var(--gray-border)', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}
+                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--gray-light)'}
+                      onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                      🔗 Paylaş
+                    </button>
+                    <button 
+                      onClick={handleDeleteProject}
+                      style={{ display: 'block', width: '100%', padding: '12px 16px', textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '14px', fontWeight: '500', color: '#FF3333' }}
+                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--gray-light)'}
+                      onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                      🗑️ Sil
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          
           <h2 style={{ fontSize: '20px', color: 'gray', marginBottom: '24px', fontWeight: '500' }}>
             {project.artist?.name || 'Bilinmeyen Sanatçı'}
           </h2>
