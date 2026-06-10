@@ -8,11 +8,13 @@ const {
   deleteProject,
   getSharedProject,
   cloneProject,
+  moveProject,
 } = require('../controllers/projectController');
 const { protect, adminOnly } = require('../middleware/authMiddleware');
 
 router.get('/shared/:token', getSharedProject);
 router.post('/shared/:token/clone', protect, cloneProject);
+router.post('/:id/move', protect, moveProject);
 
 // GET  /api/projects        → Tüm projeler (Artık Private - Sadece kullanıcının kendi projeleri)
 // POST /api/projects        → Proje oluştur (Private)

@@ -4,6 +4,7 @@ import api from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
 import { PlayerContext } from '../context/PlayerContext';
 import TrackList from '../components/TrackList';
+import Modal from '../components/Modal';
 import { formatUrl } from '../utils/formatUrl';
 
 const ProjectPage = () => {
@@ -18,6 +19,13 @@ const ProjectPage = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [showTrackForm, setShowTrackForm] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  
+  // Taşıma (Move) işlemi state'leri
+  const [showMoveModal, setShowMoveModal] = useState(false);
+  const [userProjects, setUserProjects] = useState([]);
+  const [selectedTargetProject, setSelectedTargetProject] = useState('');
+  const [isMoving, setIsMoving] = useState(false);
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -90,6 +98,34 @@ const ProjectPage = () => {
     } catch (error) { }
   };
 
+  const handleOpenMoveModal = async () => {
+    setShowMenu(false);
+    setShowMoveModal(true);
+    if (userProjects.length === 0) {
+      try {
+        const { data } = await api.get(`/api/users/${user._id}/projects`);
+        // Sadece diğer projeleri listele
+        setUserProjects(data.projects.filter(p => p._id !== id));
+      } catch (error) {
+        console.error(error);
+      }
+    }
+  };
+
+  const handleMoveProject = async (e) => {
+    e.preventDefault();
+    if (!selectedTargetProject) return;
+    setIsMoving(true);
+    try {
+      await api.post(`/api/projects/${id}/move`, { targetProjectId: selectedTargetProject });
+      navigate(`/project/${selectedTargetProject}`);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsMoving(false);
+    }
+  };
+
   if (loading) return <div className="spinner" style={{ margin: '100px auto' }}></div>;
   if (!project) return <div style={{ textAlign: 'center', marginTop: '100px', color: 'gray' }}>Proje bulunamadı.</div>;
 
@@ -141,6 +177,14 @@ const ProjectPage = () => {
                       Paylaş
                     </button>
                     <button
+                      onClick={handleOpenMoveModal}
+                      style={{ display: 'block', width: '100%', padding: '12px 16px', textAlign: 'left', background: 'transparent', border: 'none', borderBottom: '1px solid var(--gray-border)', cursor: 'pointer', fontSize: '14px', fontWeight: '500', color: 'white' }}
+                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--gray-light)'}
+                      onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                      Başka Klasöre Taşı
+                    </button>
+                    <button
                       onClick={handleDeleteProject}
                       style={{ display: 'block', width: '100%', padding: '12px 16px', textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '14px', fontWeight: '500', color: 'white' }}
                       onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--gray-light)'}
@@ -160,6 +204,33 @@ const ProjectPage = () => {
           <p style={{ fontSize: '15px', lineHeight: '1.6', maxWidth: '600px' }}>{project.description}</p>
         </div>
       </div>
+
+      {/* Şarkı Taşıma Modalı */}
+      <Modal isOpen={showMoveModal} onClose={() => setShowMoveModal(false)} title="Başka Klasöre Taşı">
+        <form onSubmit={handleMoveProject} style={{ padding: '8px' }}>
+          <p style={{ color: 'gray', fontSize: '14px', marginBottom: '16px' }}>
+            Bu klasördeki tüm şarkılar seçeceğiniz klasöre taşınacak ve bu klasör silinecektir.
+          </p>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontSize: '14px', marginBottom: '8px' }}>Hedef Klasör Seç</label>
+            <select
+              className="input-field"
+              style={{ background: 'var(--bg-color)', color: 'white', padding: '12px', border: '1px solid var(--gray-border)' }}
+              value={selectedTargetProject}
+              onChange={(e) => setSelectedTargetProject(e.target.value)}
+              required
+            >
+              <option value="" disabled>Klasör Seçin...</option>
+              {userProjects.map(p => (
+                <option key={p._id} value={p._id}>{p.title}</option>
+              ))}
+            </select>
+          </div>
+          <button type="submit" className="btn-primary" disabled={isMoving || !selectedTargetProject}>
+            {isMoving ? 'Taşınıyor...' : 'Şarkıları Taşı'}
+          </button>
+        </form>
+      </Modal>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', borderBottom: '1px solid var(--gray-border)', paddingBottom: '16px' }}>
         <h3 style={{ fontSize: '24px', letterSpacing: '-0.5px' }}>Şarkı Listesi</h3>

@@ -150,7 +150,7 @@ const cloneProject = async (req, res, next) => {
 
     // Projeyi klonla
     const cloned = await Project.create({
-      title: `${original.title} (kopya)`,
+      title: original.title,
       description: original.description,
       coverImageUrl: original.coverImageUrl,
       shareToken: require('crypto').randomBytes(12).toString('hex'),
@@ -165,6 +165,51 @@ const cloneProject = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
+// @desc    Şarkıları başka bir projeye taşı ve bu projeyi sil
+// @route   POST /api/projects/:id/move
+// @access  Private
+const moveProject = async (req, res, next) => {
+  try {
+    const { targetProjectId } = req.body;
+    if (!targetProjectId) {
+      return res.status(400).json({ message: 'Target project ID is required' });
+    }
+
+    const sourceProject = await Project.findById(req.params.id);
+    const targetProject = await Project.findById(targetProjectId);
+
+    if (!sourceProject || !targetProject) {
+      return res.status(404).json({ message: 'Source or target project not found' });
+    }
+
+    if (
+      sourceProject.artist.toString() !== req.user._id.toString() ||
+      targetProject.artist.toString() !== req.user._id.toString()
+    ) {
+      return res.status(403).json({ message: 'Not authorized to move to this project' });
+    }
+
+    // Şarkıları hedef projeye geçir
+    targetProject.tracks.push(...sourceProject.tracks);
+    await targetProject.save();
+
+    // Şarkıların project referansını güncelle
+    if (sourceProject.tracks.length > 0) {
+      await Track.updateMany(
+        { _id: { $in: sourceProject.tracks } },
+        { project: targetProject._id }
+      );
+    }
+
+    // Kaynak projeyi sil
+    await sourceProject.deleteOne();
+
+    res.json({ message: 'Moved successfully', targetProjectId: targetProject._id });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getAllProjects,
   getProjectById,
@@ -173,4 +218,5 @@ module.exports = {
   deleteProject,
   getSharedProject,
   cloneProject,
+  moveProject,
 };
