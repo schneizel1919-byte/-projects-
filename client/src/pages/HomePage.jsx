@@ -237,6 +237,18 @@ const HomePage = () => {
               >
                 SİL
               </button>
+              {project.shareToken && (
+                <button
+                  onClick={() => {
+                    const link = `${window.location.origin}/shared/${project.shareToken}`;
+                    navigator.clipboard.writeText(link);
+                    import('react-hot-toast').then(m => m.default.success('Paylaşım linki kopyalandı! 🔗'));
+                  }}
+                  style={{ position: 'absolute', top: '10px', left: '10px', background: 'rgba(0,0,0,0.7)', color: 'white', padding: '6px 12px', fontSize: '12px', fontWeight: 'bold', backdropFilter: 'blur(4px)' }}
+                >
+                  🔗
+                </button>
+              )}
             </div>
           ))}
         </div>

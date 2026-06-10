@@ -1,4 +1,5 @@
 const Project = require('../models/Project');
+const Track = require('../models/Track');
 const crypto = require('crypto');
 
 // @desc    Tüm projeleri getir
@@ -132,6 +133,38 @@ const getSharedProject = async (req, res, next) => {
   }
 };
 
+// @desc    Share token ile projeyi kütüphaneye ekle (Clone)
+// @route   POST /api/projects/shared/:token/clone
+// @access  Private
+const cloneProject = async (req, res, next) => {
+  try {
+    const original = await Project.findOne({ shareToken: req.params.token }).populate('tracks');
+    if (!original) return res.status(404).json({ message: 'Proje bulunamadı veya link geçersiz.' });
+    if (original.artist.toString() === req.user._id.toString())
+      return res.status(400).json({ message: 'Bu zaten senin projen!' });
+
+    // Şarkıları klonla
+    const clonedTracks = await Promise.all(
+      original.tracks.map(t => Track.create({ title: t.title, audioUrl: t.audioUrl, duration: t.duration, artist: req.user._id, project: null }))
+    );
+
+    // Projeyi klonla
+    const cloned = await Project.create({
+      title: `${original.title} (kopya)`,
+      description: original.description,
+      coverImageUrl: original.coverImageUrl,
+      shareToken: require('crypto').randomBytes(12).toString('hex'),
+      artist: req.user._id,
+      tracks: clonedTracks.map(t => t._id),
+    });
+
+    // Track'leri klonlanan projeye bağla
+    await Track.updateMany({ _id: { $in: clonedTracks.map(t => t._id) } }, { project: cloned._id });
+
+    res.status(201).json(cloned);
+  } catch (error) { next(error); }
+};
+
 module.exports = {
   getAllProjects,
   getProjectById,
@@ -139,4 +172,5 @@ module.exports = {
   updateProject,
   deleteProject,
   getSharedProject,
+  cloneProject,
 };
