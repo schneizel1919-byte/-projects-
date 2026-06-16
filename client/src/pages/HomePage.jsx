@@ -1,10 +1,24 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import axios from 'axios';
 import api from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
 import { PlayerContext } from '../context/PlayerContext';
 import ProjectCard from '../components/ProjectCard';
 import Modal from '../components/Modal';
+import { formatUrl } from '../utils/formatUrl';
+
+const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+// Misafir Token: Tarayıcıda saklanır, her oturumda aynı kalır
+const getGuestToken = () => {
+  let token = localStorage.getItem('guestToken');
+  if (!token) {
+    token = crypto.randomUUID();
+    localStorage.setItem('guestToken', token);
+  }
+  return token;
+};
 
 const HomePage = () => {
   const { user, loading: authLoading } = useContext(AuthContext);
@@ -53,22 +67,8 @@ const HomePage = () => {
     );
   }
 
-  // Giriş YAPMAMIŞ kullanıcılar için karşılama sayfası
-  if (!user) {
-    return (
-      <div style={{ textAlign: 'center', marginTop: '120px' }}>
-        <h1 style={{ fontSize: '56px', letterSpacing: '-2px', fontWeight: '700', marginBottom: '24px' }}>
-          Müzik Kütüphanene Hoş Geldin.
-        </h1>
-        <p style={{ color: 'gray', fontSize: '18px', maxWidth: '600px', margin: '0 auto 48px', lineHeight: '1.6' }}>
-          [projects], kendi müzik demolarını güvenle yükleyebileceğin, saklayabileceğin ve sadece istediğin kişilerle bağlantı aracılığıyla paylaşabileceğin tamamen kişisel bir bulut alanıdır.
-        </p>
-        <Link to="/auth" className="btn-primary" style={{ padding: '16px 32px', fontSize: '18px', textDecoration: 'none' }}>
-          Giriş Yap / Kayıt Ol
-        </Link>
-      </div>
-    );
-  }
+  // Giriş YAPMAMIŞ kullanıcılar için Misafir Modu
+  if (!user) return <GuestMode />;
 
   // ----------- GİRİŞ YAPMIŞ KULLANICI İÇİN İŞLEMLER -----------
   const handleCreateProject = async (e) => {
@@ -246,4 +246,97 @@ const HomePage = () => {
   );
 };
 
+// ========== MİSAFİR MODU BİLEŞENİ ==========
+const GuestMode = () => {
+  const [tracks, setTracks] = useState([]);
+  const [title, setTitle] = useState('');
+  const [audioFile, setAudioFile] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [currentSrc, setCurrentSrc] = useState('');
+  const audioRef = useRef(null);
+  const guestToken = getGuestToken();
+
+  useEffect(() => {
+    axios.get(`${API}/api/guest/${guestToken}`).then(r => setTracks(r.data)).catch(() => {});
+  }, []);
+
+  const handleUpload = async (e) => {
+    e.preventDefault();
+    if (!audioFile) return;
+    setIsUploading(true);
+    const form = new FormData();
+    form.append('file', audioFile);
+    form.append('title', title || audioFile.name);
+    form.append('guestToken', guestToken);
+    try {
+      const { data } = await axios.post(`${API}/api/guest/upload`, form);
+      setTracks([data, ...tracks]);
+      setTitle(''); setAudioFile(null);
+    } catch (e) { console.error(e); }
+    finally { setIsUploading(false); }
+  };
+
+  const handleDelete = async (id) => {
+    await axios.delete(`${API}/api/guest/${guestToken}/${id}`);
+    setTracks(tracks.filter(t => t._id !== id));
+    if (currentSrc && tracks.find(t => t._id === id)?.audioUrl === currentSrc) setCurrentSrc('');
+  };
+
+  const handlePlay = (url) => {
+    const formatted = formatUrl(url);
+    setCurrentSrc(formatted);
+    setTimeout(() => audioRef.current?.play(), 50);
+  };
+
+  return (
+    <div style={{ maxWidth: '700px', margin: '60px auto', padding: '0 24px' }}>
+      {/* Başlık */}
+      <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+        <div style={{ display: 'inline-block', background: 'var(--gray-light)', border: '1px solid var(--gray-border)', borderRadius: '20px', padding: '6px 16px', fontSize: '12px', color: 'gray', marginBottom: '16px', letterSpacing: '1px' }}>
+          MİSAFİR MODU — 24 saat geçici
+        </div>
+        <h1 style={{ fontSize: '40px', fontWeight: '700', letterSpacing: '-1.5px', marginBottom: '12px' }}>Şarkılarını Dene.</h1>
+        <p style={{ color: 'gray', fontSize: '15px', lineHeight: '1.6' }}>
+          Giriş yapmadan şarkı yükle ve dinle. Dosyalar 24 saat sonra otomatik silinir.
+        </p>
+        <Link to="/auth" style={{ color: 'white', fontSize: '13px', textDecoration: 'underline', opacity: 0.6 }}>
+          Kalıcı kütüphane için kayıt ol →
+        </Link>
+      </div>
+
+      {/* Yükleme Formu */}
+      <form onSubmit={handleUpload} style={{ border: '1px solid var(--gray-border)', padding: '24px', borderRadius: '8px', marginBottom: '32px', background: 'var(--gray-light)' }}>
+        <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>Şarkı Yükle</h3>
+        <input className="input-field" style={{ background: 'var(--bg-color)' }} type="text" placeholder="Şarkı Adı" value={title} onChange={e => setTitle(e.target.value)} />
+        <input className="input-field" style={{ background: 'var(--bg-color)', padding: '8px' }} type="file" accept="audio/*" onChange={e => setAudioFile(e.target.files[0])} required />
+        <button type="submit" className="btn-primary" disabled={isUploading} style={{ marginTop: '8px' }}>
+          {isUploading ? 'Yükleniyor...' : 'Yükle'}
+        </button>
+      </form>
+
+      {/* Gizli Audio Elemanı */}
+      <audio ref={audioRef} src={currentSrc} controls style={{ width: '100%', marginBottom: '24px', display: currentSrc ? 'block' : 'none' }} />
+
+      {/* Şarkı Listesi */}
+      {tracks.length === 0 ? (
+        <p style={{ color: 'gray', textAlign: 'center' }}>Henüz şarkı yüklemedin.</p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {tracks.map((t, i) => (
+            <div key={t._id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', border: '1px solid var(--gray-border)', borderRadius: '4px', background: currentSrc === formatUrl(t.audioUrl) ? 'var(--gray-light)' : 'transparent' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ color: 'gray', fontSize: '13px', width: '20px' }}>{i + 1}</span>
+                <button onClick={() => handlePlay(t.audioUrl)} className="btn-primary" style={{ width: '36px', height: '36px', borderRadius: '50%', padding: 0, fontSize: '14px' }}>►</button>
+                <span style={{ fontSize: '14px', fontWeight: '500' }}>{t.title}</span>
+              </div>
+              <button onClick={() => handleDelete(t._id)} style={{ color: 'gray', fontSize: '12px', background: 'none', border: 'none', cursor: 'pointer' }}>Sil</button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default HomePage;
+

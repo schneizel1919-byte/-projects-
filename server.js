@@ -10,6 +10,7 @@ const userRoutes = require('./routes/userRoutes');
 const projectRoutes = require('./routes/projectRoutes');
 const trackRoutes = require('./routes/trackRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
+const guestRoutes = require('./routes/guestRoutes');
 const path = require('path');
 
 // Veritabanına bağlan
@@ -35,6 +36,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/tracks', trackRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/guest', guestRoutes);
 
 // Uploads klasörünü tarayıcıya aç
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
